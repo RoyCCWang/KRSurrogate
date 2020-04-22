@@ -90,18 +90,25 @@ using Distributed
 
 @everywhere include("../src/misc/parallel_utilities.jl")
 
-@everywhere include("../tests/verification/fit_example_copulae.jl")
+#@everywhere include("../tests/verification/fit_example_copulae.jl")
 
 @everywhere include("../tests/verification/helpers.jl")
 @everywhere include("../tests/example_helpers/demo_densities.jl")
 @everywhere include("../tests/verification/adaptive/demo_cases.jl")
 
-@everywhere include("../tests/verification/fit_example_gmm_cauchy.jl")
+#@everywhere include("../tests/verification/fit_example_gmm_cauchy.jl")
 @everywhere include("../tests/verification/transport_derivative_helpers.jl")
 
 @everywhere include("../src/KR/eval_KR_density.jl")
 
-#@everywhere include("../src/fresh/setup_quantile.jl")
+# for non-adaptive.
+@everywhere include("../src/fit/fit_non_adaptive.jl")
+
+@everywhere include("../src/KR/bundled/non_adaptive_isonormal.jl")
+@everywhere include("../src/kernels/RQ_non_adaptive.jl")
+@everywhere include("../src/KR/setupallKR_non_adaptive.jl")
+@everywhere include("../src/KR/transport_non_adaptive.jl")
+@everywhere include("../src/KR/misc_non_adaptive.jl")
 
 PyPlot.close("all")
 fig_num = 1
@@ -116,6 +123,7 @@ D = 2
 
 #scene_tag = "squiggle"
 scene_tag = "helmet"
+
 f, x_ranges, limit_a, limit_b, fig_num = setuporaclefromimage(scene = scene_tag)
 N_array = collect( length(x_ranges[d]) for d = 1:D )
 
@@ -146,11 +154,11 @@ fig_num = imshowgrayscale(fig_num, f.(Xp), "f.(Xp)")
 
 # fit density via Bayesian optimization.
 
-amplification_factor = 2.0
-a_array = [3.0; 1.0] #good for downsample_factor = 1
-#a_array = [15.0; 5.0]
 
-σ_array = 1e-4 .* ones(Float64, 2)
+#a_array = [0.07; 1.0] # show how we cannot achieve good fit since we're restricting coeffs to be positive.
+a_array = [1.0; 1.0] #good for downsample_factor = 1
+
+σ_array = [1e-6; 1e-6]
 
 D_fit = D
 X_array = collect( collect( 𝑋[n][1:d] for n = 1:N_X[d] ) for d = 1:D_fit )
@@ -160,14 +168,13 @@ X_array = collect( collect( 𝑋[n][1:d] for n = 1:N_X[d] ) for d = 1:D_fit )
 skip_flag = true
 #skip_flag = false
 
-c_array, 𝓧_array, θ_array,
-          dφ_array, d2φ_array,
-          dϕ_array, d2ϕ_array, f, limit_a, limit_b,
-          x_ranges, src_μ, src_σ_array, Y_array,
-          f_joint = demohelmetadaptivebp(a_array, σ_array;
-                        amplification_factor = amplification_factor,
+max_fit_iters = 2000 #15000
+
+c_array, 𝓧_array, θ_array, f, limit_a, limit_b, x_ranges,
+  src_μ, src_σ_array, f_joint = demohelmetnonadaptive(a_array, σ_array;
                         downsample_factor = downsample_factor,
                         skip_flag = skip_flag,
+                        max_iters = max_fit_iters,
                         scene_tag = scene_tag)
 
 #
@@ -176,7 +183,7 @@ c_array, 𝓧_array, θ_array,
 # visualize.
 
 
-# TODO visualize the surrogate density, full joint.
+# visualize the surrogate density, full joint.
 max_integral_evals = 10000 #typemax(Int)
 initial_divisions = 1
 gq_array, CDF_array = packagefitsolution(c_array, θ_array, 𝓧_array;
@@ -222,15 +229,10 @@ src_dist, df_target, d2f_target,
 
 # set up transport map and derivatives..
 initial_divisions = 1
-T_map, ds_T_map, dT, quantile_map1,
-    CDF_map1 = setupbundledKR( KR_config,
+T_map, ds_T_map, dT = setupbundledKRnonadaptive( KR_config,
                                   c_array,
                                   θ_array,
                                   𝓧_array,
-                                  dφ_array,
-                                  d2φ_array,
-                                  dϕ_array,
-                                  d2ϕ_array,
                                   src_μ,
                                   src_σ_array,
                                   limit_a,
@@ -239,6 +241,7 @@ T_map, ds_T_map, dT, quantile_map1,
                                   df_target = df_target,
                                   d2f_target = d2f_target,
                                   initial_divisions = initial_divisions)
+
 
 # verify derivatives.
 verifytransportderivatives(src_dist, T_map, ds_T_map, dT, length(limit_a))
@@ -249,6 +252,11 @@ verifytransportderivatives(src_dist, T_map, ds_T_map, dT, length(limit_a))
 
 #N_visualization = 1000
 N_visualization = 100000 # for helmet. use multiple cores.
+
+if scene_tag != "helmet"
+    N_visualization = 1000
+end
+
 println("batch transport timing:")
 
 ### sequential version.

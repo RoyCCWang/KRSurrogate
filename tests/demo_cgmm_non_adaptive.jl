@@ -90,13 +90,13 @@ using Distributed
 
 @everywhere include("../src/misc/parallel_utilities.jl")
 
-@everywhere include("../tests/verification/fit_example_copulae.jl")
+#@everywhere include("../tests/verification/fit_example_copulae.jl")
 
 @everywhere include("../tests/verification/helpers.jl")
 @everywhere include("../tests/example_helpers/demo_densities.jl")
 @everywhere include("../tests/verification/adaptive/demo_cases.jl")
 
-@everywhere include("../tests/verification/fit_example_gmm_cauchy.jl")
+#@everywhere include("../tests/verification/fit_example_gmm_cauchy.jl")
 @everywhere include("../tests/verification/transport_derivative_helpers.jl")
 
 # for non-adaptive.

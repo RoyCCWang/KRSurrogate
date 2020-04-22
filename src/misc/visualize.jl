@@ -10,8 +10,14 @@ function visualizefit2Dmarginal(fig_num,
                                 N_visualize_2D_per_dim = 100,
                                 N_visualize_1D = 300,
                                 display_1D_flag = true,
-                                Y_array = [] )
+                                Y_array = [],
+                                X_array_debug = [],
+                                f_X_array_debug = [] )
     #
+    for d = 1:length(X_array_debug)
+        @assert length(X_array_debug[d]) == length(f_X_array_debug[d])
+    end
+
     gq_array, CDF_array = packagefitsolution(c_array, θ_array, 𝓧_array;
                             max_integral_evals = max_integral_evals)
 
@@ -58,6 +64,10 @@ function visualizefit2Dmarginal(fig_num,
 
         if !isempty(Y_array)
             PyPlot.plot(x_ranges[1], Y_array[1], "^", label = "Y")
+        end
+
+        if !isempty(X_array_debug)
+            PyPlot.plot(X_array_debug[1], f_X_array_debug[1], "s", label = "samples used for fitting")
         end
 
         PyPlot.title("f vs. fq")

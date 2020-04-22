@@ -6,7 +6,7 @@ function fitskiplastnonadaptive( f_X_array::Vector{Vector{T}},
                       max_iters_RKHS::Int,
                       a_array::Vector{T},
                       σ_array::Vector{T},
-                      zero_tol_RKHS::T,
+                      fit_optim_config,
                       prune_tol::T )::Tuple{Vector{Vector{T}},
                       Vector{Vector{Vector{T}}},
                       Vector{RKHSRegularization.RationalQuadraticKernelType{T}} } where T <: Real
@@ -26,9 +26,10 @@ function fitskiplastnonadaptive( f_X_array::Vector{Vector{T}},
     σ² = σ_array[D]^2
 
     c_array[D], 𝓧_array[D], unused = fitRKHSdensity(  f_X,
-                                                    X, max_iters_RKHS, σ²,
+                                                    X,
+                                                    σ²,
                                                     θ_array[D],
-                                                    zero_tol_RKHS,
+                                                    fit_optim_config,
                                                     prune_tol )
 
     for d = (D-1):-1:1
@@ -41,9 +42,9 @@ function fitskiplastnonadaptive( f_X_array::Vector{Vector{T}},
         σ² = σ_array[d]^2
 
         c_array[d], 𝓧_array[d], unused = fitRKHSdensity(  f_X,
-                                                    X, max_iters_RKHS, σ²,
+                                                    X, σ²,
                                                     θ_array[d],
-                                                    zero_tol_RKHS,
+                                                    fit_optim_config,
                                                     prune_tol )
     end
 

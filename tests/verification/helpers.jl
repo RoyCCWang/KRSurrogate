@@ -23,7 +23,7 @@ function preparefitsynthdensitydemo!(   a_array::Vector{T},
     X_array = collect( collect( 𝑋[n][1:d] for n = 1:N_X[d] ) for d = 1:D_fit )
 
     # try this out.
-    X_array = collect( unique(X_array[d]) for d = 1:D )
+    X_array = collect( unique(X_array[d]) for d = 1:D_fit )
 
 
     @time f_X_array = collect( f_joint.(X_array[d]) for d = 1:D_fit )
@@ -88,7 +88,8 @@ end
 function fitdensitynonadaptive(      f::Function,
                                 f_joint::Function,
                                 𝑋::Vector{Vector{T}},
-                                N_X::Vector{Int};
+                                N_X::Vector{Int},
+                                fit_optim_config;
                                 skip_flag::Bool = false,
                                 a_array = 0.1 .* ones(T, length(N_X)),
                                 σ_array = sqrt(1e-5) .* ones(T, length(N_X)),
@@ -108,10 +109,11 @@ function fitdensitynonadaptive(      f::Function,
     @time c_array, 𝓧_array,
         θ_array = fitskiplastnonadaptive(f_X_array, X_array,
                                         max_iters_RKHS, a_array, σ_array,
-                                        zero_tol_RKHS, prune_tol)
+                                        fit_optim_config,
+                                        prune_tol)
 
     #
-    return c_array, 𝓧_array, θ_array
+    return c_array, 𝓧_array, θ_array, X_array, f_X_array
 end
 
 function setupquantilefordemo(  f_target::Function,
