@@ -101,6 +101,8 @@ using Distributed
 
 @everywhere include("../src/KR/eval_KR_density.jl")
 
+@everywhere include("../src/fresh/setup_quantile.jl")
+
 PyPlot.close("all")
 fig_num = 1
 
@@ -188,9 +190,9 @@ xv_ranges = collect( LinRange(limit_a[d], limit_b[d], Nv_array[d]) for d = 1:2 )
 Xv_nD = Utilities.ranges2collection(xv_ranges, Val(2))
 
 
-println("Timing, pdf_g.(Xv_nD)")
-@time g_Xv_nD = reshape(parallelevals(pdf_g, vec(Xv_nD)), size(Xv_nD))
-println("End timing.")
+# println("Timing, pdf_g.(Xv_nD)")
+# @time g_Xv_nD = reshape(parallelevals(pdf_g, vec(Xv_nD)), size(Xv_nD))
+# println("End timing.")
 
 # fig_num = VisualizationTools.visualizemeshgridpcolor(xv_ranges,
 #                   g_Xv_nD, [], "x", fig_num, "g")
@@ -235,55 +237,22 @@ verifytransportderivatives(src_dist, T_map, ds_T_map, dT, length(limit_a))
 
 #include("helmet_second.jl")
 
-CDF_map = xx->transportisonormaltoCDFspace(xx, src_μ, src_σ_array)
-
-src_dist_array = collect( Distributions.Normal(src_μ[d], src_σ_array[d]) for d = 1:D )
-CDF_ref = xx->collect( Distributions.cdf(src_dist_array[d], xx[d]) for d = 1:D )
-
-x0 = rand(src_dist)
-u0 = CDF_ref(x0)
-
-T0 = xx->evalKR(   1,
-                c_array,
-                θ_array,
-                𝓧_array,
-                KR_config.max_integral_evals,
-                KR_config.x_ranges,
-                dφ_array,
-                d2φ_array,
-                KR_config.N_nodes_tanh,
-                KR_config.m_tsq,
-                KR_config.quantile_err_tol,
-                KR_config.max_traversals,
-                KR_config.N_predictive_traversals,
-                KR_config.correction_epoch,
-                KR_config.quantile_max_iters,
-                KR_config.quantile_convergence_zero_tol,
-                KR_config.n_limit,
-                KR_config.n0)
-
-y0, discrepancy_y0 = T0(u0)
-
-y1, discrepancy_y1 = T_map(x0)
-u1 = CDF_map1(x0)
-q1, discrepancy_q1 = quantile_map1(u1)
-
-# TODO I am here. quantile map has a bug. # lay out software pathway.
-println("discrepancy between u0, u1 is ", norm(u0-u1))
-println("discrepancy between q1, y1 is ", norm(y1-q1))
-println("discrepancy between y0, y1 is ", norm(y1-y0[1]))
-println()
-
-
-@assert 1==2
-
-
-# something is wrong with T_map. TODO debug. and make sure derivativess aren't affected.
-
-N_visualization = 1000
+#N_visualization = 1000
+N_visualization = 100000 # for helmet. use multiple cores.
 println("batch transport timing:")
-@time x_array, discrepancy_array,
-        x_src_array = runbatchtransport( src_dist,
+
+### sequential version.
+# @time x_array, discrepancy_array,
+#         x_src_array = runbatchtransport( src_dist,
+#                                         T_map,
+#                                         ds_T_map, dT;
+#                                         N_visualization = N_visualization)
+
+### parallel version.
+N_batches = 15 # must be larger than N_batch.
+@time x_array, discrepancy_array = runbatchtransportparallel( N_visualization,
+                                        N_batches,
+                                        src_dist,
                                         T_map,
                                         ds_T_map, dT;
                                         N_visualization = N_visualization)
@@ -293,19 +262,20 @@ println()
 
 
 # #### visualize histogram.
-# n_bins = N_array[1] *5
-# fig_num = visualize2Dhistogram(fig_num, x_array, limit_a, limit_b;
-#                                 use_bounds = true, n_bins = n_bins,
-#                                 axis_equal_flag = true,
-#                                 title_string = "xp, bounds")
-#
-# fig_num = visualize2Dhistogram(fig_num, x_array, limit_a, limit_b;
-#                                 use_bounds = false, n_bins = n_bins,
-#                                 axis_equal_flag = true,
-#                                 title_string = "xp, no bounds")
-#
-# #
-# fig_num = visualize2Dhistogram(fig_num, x_src_array, limit_a, limit_b;
-#                                 use_bounds = true, n_bins = n_bins,
-#                                 axis_equal_flag = true,
-#                                 title_string = "x_src, bounds")
+n_bins = N_array[1] *10
+#n_bins = N_array[1] *3
+fig_num = visualize2Dhistogram(fig_num, x_array, limit_a, limit_b;
+                                use_bounds = true, n_bins = n_bins,
+                                axis_equal_flag = true,
+                                title_string = "xp, bounds",
+                                flip_vertical_flag = true)
+
+fig_num = visualize2Dhistogram(fig_num, x_array, limit_a, limit_b;
+                                use_bounds = false, n_bins = n_bins,
+                                axis_equal_flag = true,
+                                title_string = "xp, no bounds",
+                                flip_vertical_flag = true)
+
+#### TODO: check that skip_flag = true also works. Then non-adaptive skip and no skip.
+# refactor code.
+# work on coupla example, 4-D.

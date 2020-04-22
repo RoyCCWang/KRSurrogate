@@ -1,4 +1,54 @@
 
+function runbatchTmap(M::Int, T_map::Function, src_dist, dummy_val::T) where T
+
+    x_array = Vector{Vector{T}}(undef, M)
+    discrepancy_array = Vector{Vector{T}}(undef, M)
+
+    for m = 1:M
+        x = rand(src_dist)
+
+        xp, disc = T_map(x)
+
+        x_array[m] = xp
+        discrepancy_array[m] = disc
+    end
+
+    return x_array, discrepancy_array
+end
+
+function runbatchtransportparallel( M::Int,
+                                    N_batches,
+                                    src_dist,
+                                    T_map,
+                                    ds_T_map,
+                                    dT;
+                                    N_visualization = 1000)
+
+    ## visualize transport.
+    # work on intervals.
+    M_for_each_batch = Vector{Int}(undef, N_batches)
+    𝑀::Int = round(Int, M/N_batches)
+    fill!(M_for_each_batch, 𝑀)
+    M_for_each_batch[end] = abs(M - (N_batches-1)*𝑀)
+
+    # prepare worker func.
+    workerfunc = mm->runbatchTmap(mm, T_map, src_dist, 1.0)
+
+    # compute solution.
+    sol = pmap(workerfunc, M_for_each_batch )
+
+    # unpack solution.
+    x_array, discrepancy_array = unpackpmap(sol, M)
+
+
+    max_val, max_ind = findmax(norm.(discrepancy_array))
+    println("l-2 norm( abs(u-u_rec) ), summed over all dimensions: ", sum(norm.(discrepancy_array)))
+    println("largest l-1 discrepancy is ", max_val)
+    println("At that case: x = ", x_array[max_ind])
+    println()
+
+    return x_array, discrepancy_array
+end
 
 function runbatchtransport(src_dist, T_map, ds_T_map, dT;
                             N_visualization = 1000)

@@ -81,6 +81,7 @@ function evalKR(    M::Int,
     return x_array, discrepancy_array
 end
 
+# this is the skip_D version of evalKR.
 function evalKR2(    M::Int,
                     c_array::Vector{Vector{T}},
                     θ_array::Vector{RKHSRegularization.AdaptiveKernelType{RKHSRegularization.RationalQuadraticKernelType{T}}},

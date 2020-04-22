@@ -1,7 +1,7 @@
 Random.seed!(205)
 
 N_viz = 100000 # for 30 helmet.
-#N_viz = 1000 # much be larger than N_batch.
+#N_viz = 1000 # must be larger than N_batch.
 N_batches = 15 #100
 
 # quantile-related parameters.

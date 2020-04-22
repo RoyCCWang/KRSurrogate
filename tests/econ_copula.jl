@@ -271,7 +271,7 @@ PyPlot.legend()
 
 # batch-related parameters.
 N_viz = 10000
-#N_viz = 100 # much be larger than N_batch.
+#N_viz = 100 # must be larger than N_batch.
 N_batches = 15 #100
 
 # quantile-related parameters.

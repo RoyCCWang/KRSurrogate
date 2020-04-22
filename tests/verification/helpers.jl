@@ -154,7 +154,7 @@ function setupquantilefordemo(  f_target::Function,
     # set up source distribution.
     D = length(limit_a)
 
-    src_dist = Distributions.MvNormal(μ, diagm(σ_array))
+    src_dist = Distributions.MvNormal(μ, diagm(σ_array.^2))
 
     ## bundled map.
     df_target = xx->ForwardDiff.gradient(f_target, xx)

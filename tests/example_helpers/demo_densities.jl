@@ -80,9 +80,9 @@ function getk05helmetgrayscale(ch_select::Int = 1) where T <: Real
 
     D = 2
 
-    #imA = PyPlot.imread("/home/roy/MEGAsync/data/image/kodak_helmet/k05_helmet_30.png")
+    imA = PyPlot.imread("/home/roy/MEGAsync/data/image/kodak_helmet/k05_helmet_30.png")
     #imA = PyPlot.imread("/home/roy/MEGAsync/data/image/kodak_helmet/k05_helmet_12x12.png")
-    imA = PyPlot.imread("/home/roy/MEGAsync/data/image/kodak_helmet/wiggle_12x12.png")
+    #imA = PyPlot.imread("/home/roy/MEGAsync/data/image/kodak_helmet/wiggle_12x12.png")
 
     imB0 = Matrix{Float64}(undef,size(imA,1), size(imA,2))
     imB0[:,:] = imA[:,:,ch_select]
