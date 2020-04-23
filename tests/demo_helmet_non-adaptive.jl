@@ -155,8 +155,10 @@ fig_num = imshowgrayscale(fig_num, f.(Xp), "f.(Xp)")
 # fit density via Bayesian optimization.
 
 
-#a_array = [0.07; 1.0] # show how we cannot achieve good fit since we're restricting coeffs to be positive.
-a_array = [1.0; 1.0] #good for downsample_factor = 1
+## option 1:
+kernel_center_option = "grid"
+a_array = [1.0; 1.0] #for kernel centers on a downsampled grid.
+downsample_factor = 1.0
 
 σ_array = [1e-6; 1e-6]
 
@@ -165,19 +167,24 @@ X_array = collect( collect( 𝑋[n][1:d] for n = 1:N_X[d] ) for d = 1:D_fit )
 @time f_X_array = collect( f_joint.(X_array[d]) for d = 1:D_fit )
 
 
-skip_flag = true
-#skip_flag = false
+#skip_flag = true
+skip_flag = false
 
-max_fit_iters = 2000 #15000
+max_iters_RKHS = 2000 #15000
 
 c_array, 𝓧_array, θ_array, f, limit_a, limit_b, x_ranges,
   src_μ, src_σ_array, f_joint = demohelmetnonadaptive(a_array, σ_array;
-                        downsample_factor = downsample_factor,
-                        skip_flag = skip_flag,
-                        max_iters = max_fit_iters,
-                        scene_tag = scene_tag)
+                                    downsample_factor = downsample_factor,
+                                    kernel_center_option = kernel_center_option,
+                                    skip_flag = skip_flag,
+                                    scene_tag = scene_tag,
+                                    max_iters = max_iters_RKHS)
 
-#
+println("number of kernel centers for each dimension:")
+println(collect( length(𝓧_array[d]) for d = 1:length(𝓧_array)))
+println()
+
+
 #fq = xx->RKHSRegularization.evalquery(xx, c_array[2], 𝓧_array[2], θ_array[2])
 
 # visualize.

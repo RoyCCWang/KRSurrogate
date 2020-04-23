@@ -5,11 +5,12 @@ function selectsubsequentkernelcenterssequentially!( X_candidates::Vector{Vector
                             X0::Vector{Vector{T}},
                             h::Function,
                             f::Function,
-                            θ_RKHS::KT;
-                            zero_tol_RKHS::T = 1e-13,
+                            θ_RKHS::KT,
+                            fit_optim_config;
+                            #zero_tol_RKHS::T = 1e-13,
                             prune_tol::T = 1.1*zero_tol_RKHS,
                             close_radius_tol::T = 1e-6,
-                            max_iters_RKHS::Int = 5000,
+                            #max_iters_RKHS::Int = 5000,
                             σ²::T = 1e-3 ) where {T,KT}
     # find the candidate with largest h value.
     h_X_can = h.(X_candidates)
@@ -30,8 +31,8 @@ function selectsubsequentkernelcenterssequentially!( X_candidates::Vector{Vector
     f_X_fit = f.(X_fit)
     c_q, 𝓧_q,
         keep_indicators_unused = fitRKHSdensity(  f_X_fit,
-                                X_fit, max_iters_RKHS, σ²,
-                                θ_RKHS, zero_tol_RKHS,
+                                X_fit, σ²,
+                                θ_RKHS, fit_optim_config,
                                 prune_tol)
 
 
@@ -46,11 +47,12 @@ function refinecenters!( X_candidates::Vector{Vector{T}},
                     f::Function,
                     fq::Function,
                     θ_RKHS::KT,
-                    X_ref;
-                    zero_tol_RKHS::T = 1e-13,
+                    X_ref,
+                    fit_optim_config;
+                    #zero_tol_RKHS::T = 1e-13,
                     prune_tol::T = 1.1*zero_tol_RKHS,
                     close_radius_tol::T = 1e-6,
-                    max_iters_RKHS::Int = 5000,
+                    #max_iters_RKHS::Int = 5000,
                     σ²::T = 1e-3 ) where {T,KT}
     # check.
     if M > length(X_candidates)
@@ -85,11 +87,12 @@ function refinecenters!( X_candidates::Vector{Vector{T}},
                                 X_fit, # X0
                                 h,
                                 f,
-                                θ_RKHS;
-                                zero_tol_RKHS = zero_tol_RKHS,
+                                θ_RKHS,
+                                fit_optim_config;
+                                #zero_tol_RKHS = zero_tol_RKHS,
                                 prune_tol = prune_tol,
                                 close_radius_tol = close_radius_tol,
-                                max_iters_RKHS = max_iters_RKHS,
+                                #max_iters_RKHS = max_iters_RKHS,
                                 σ² = σ²)
 
         #

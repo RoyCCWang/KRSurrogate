@@ -10,11 +10,11 @@ struct KernelCenterConfigType{T}
     kDPP_zero_tol::T
     N_kDPP_draws::Int
     N_kDPP_per_draw::Int
-    zero_tol_RKHS::T
+    #zero_tol_RKHS::T
     prune_tol::T
     close_radius_tol::T
     N_refinements::Int
-    max_iters_RKHS::Int
+    #max_iters_RKHS::Int
     σ²::T
     initial_divisions::Int
 end

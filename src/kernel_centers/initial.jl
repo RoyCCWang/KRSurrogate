@@ -74,13 +74,12 @@ function selectkernelcenters!( X_candidates::Vector{Vector{T}},
                             additive_function::Function,
                             f::Function,
                             θ_kDPP_base::KT,
-                            θ_RKHS::KT2;
-                            max_iters_RKHS::Int = 5000,
+                            θ_RKHS::KT2,
+                            fit_optim_config;
                             base_gain::T = 1.0,
                             kDPP_zero_tol::T = 1e-12,
                             N_kDPP_draws::Int = 1,
                             N_kDPP_per_draw = 50,
-                            zero_tol_RKHS::T = 1e-13,
                             prune_tol::T = 1.1*zero_tol_RKHS,
                             σ²::T = 1e-3) where {T,KT,KT2}
     #
@@ -105,13 +104,15 @@ function selectkernelcenters!( X_candidates::Vector{Vector{T}},
         𝑖_kDPP = collect( i for i = 1:length(X_kDPP))
     end
 
+
+
     # fit.
     X_fit = X_kDPP
     f_X_fit = f.(X_fit)
     c_q, 𝓧_q,
         keep_indicators = fitRKHSdensity(  f_X_fit,
-                                X_fit, max_iters_RKHS, σ²,
-                                θ_RKHS, zero_tol_RKHS,
+                                X_fit, σ²,
+                                θ_RKHS, fit_optim_config,
                                 prune_tol)
 
     # remove kernel centers from candidate pool.

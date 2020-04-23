@@ -15,7 +15,6 @@ function selectelementviaunionofkDPP(   𝓨::Vector{Vector{T}},
         st = fin + 1
         fin = st + M -1
 
-
         Y_unused, ln_pdf_eval_unused, x = selectelementsviakDPP(𝓨,
                             M, θ, false, warning_tol)
 
@@ -44,10 +43,16 @@ function selectelementsviakDPP( 𝓨::Vector{Vector{T}},
     # prepare the similarity matrix, L. Denoted K here.
     K_full = RKHSRegularization.constructkernelmatrix(𝓨, θ)
 
+
     L_full = K_full
     #id_mat = Matrix{T}(LinearAlgebra.I, size(K_full))
     #L_full = Utilities.forcesymmetric(inv(id_mat-K_full)-id_mat)
 
+# println("size(L_full) = ", size(L_full))
+# display(L_full)
+#
+# BSON.bson("debug.bson", L_full = L_full)
+# @assert 9999==9
     s0, Q = eigen(L_full)
 
     # force eigen values to be positive if semi-definite matrix.

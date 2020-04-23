@@ -41,6 +41,8 @@ using Distributed
 
 @everywhere using BenchmarkTools
 
+@everywhere import BSON
+
 @everywhere include("../tests/example_helpers/test_densities.jl")
 @everywhere include("../src/misc/declarations.jl")
 
@@ -60,7 +62,7 @@ using Distributed
 @everywhere include("../src/misc/declarations.jl")
 @everywhere include("../src/kernel_centers/front_end.jl")
 
-@everywhere include("../src/kernel_centers/inference_kDPP.jl")
+include("../src/kernel_centers/inference_kDPP.jl")
 
 @everywhere include("../src/Taylor_inverse/front_end.jl")
 @everywhere include("../src/Taylor_inverse/Taylor_inverse_helpers.jl")
@@ -137,18 +139,43 @@ Xp = Utilities.ranges2collection(Xp_ranges, Val(D))
 𝑋 = vec(Xp)
 #𝑋 = collect( rand(Y_dist) for n = 1:N_realizations)
 
+
+
+# canonical_a = 1.0
+# X = getkernelcentersviaadaptivekernel(canonical_a, x_ranges, limit_a, limit_b;
+#             N_preliminary_candidates = 1000,
+#             N_refinements = 40)
+#
+# 𝑋 = X
+
+
 N_X = length(𝑋) .* ones(Int, D) #[25; length(𝑋)] # The number of kernels to fit. Will prune some afterwards.
 #N_X[1] = 25
 println("N_X = ", N_X)
 
 fig_num = imshowgrayscale(fig_num, f.(Xp), "f.(Xp)")
 
+max_iters_RKHS = 5000
 
 # fit density via Bayesian optimization.
 
-amplification_factor = 2.0
-a_array = [3.0; 1.0] #good for downsample_factor = 1
-#a_array = [15.0; 5.0]
+# ## option 3.
+# kernel_center_option = "kDPP"
+# amplification_factor = 40.0
+# a_array = [8.0; 12.0] #for kernel centers on a downsampled grid.
+
+
+## option 1:
+kernel_center_option = "grid"
+amplification_factor = 20.0
+a_array = [4.0; 6.0] #for kernel centers on a downsampled grid.
+downsample_factor = 1.5
+
+# # option 1:
+# kernel_center_option = "grid"
+# amplification_factor = 2.0
+# a_array = [3.0; 1.0]
+# downsample_factor = 1.0
 
 σ_array = 1e-4 .* ones(Float64, 2)
 
@@ -157,8 +184,8 @@ X_array = collect( collect( 𝑋[n][1:d] for n = 1:N_X[d] ) for d = 1:D_fit )
 @time f_X_array = collect( f_joint.(X_array[d]) for d = 1:D_fit )
 
 
-skip_flag = true
-#skip_flag = false
+#skip_flag = true
+skip_flag = false
 
 c_array, 𝓧_array, θ_array,
           dφ_array, d2φ_array,
@@ -167,8 +194,14 @@ c_array, 𝓧_array, θ_array,
           f_joint = demohelmetadaptivebp(a_array, σ_array;
                         amplification_factor = amplification_factor,
                         downsample_factor = downsample_factor,
+                        kernel_center_option = kernel_center_option,
                         skip_flag = skip_flag,
-                        scene_tag = scene_tag)
+                        scene_tag = scene_tag,
+                        max_iters = max_iters_RKHS)
+
+println("number of kernel centers for each dimension:")
+println(collect( length(𝓧_array[d]) for d = 1:length(𝓧_array)))
+println()
 
 #
 #fq = xx->RKHSRegularization.evalquery(xx, c_array[2], 𝓧_array[2], θ_array[2])

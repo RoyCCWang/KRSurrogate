@@ -247,3 +247,50 @@ function preparegmmdist(μ_array::Vector{Vector{T}},
 
     return pdf, dist_gen
 end
+
+# mixture of tuncated beta-marginal Gaussian copula and gamma-marginal Gaussian copula.
+function generaterandombetacopula( τ::T,
+                                    N_array::Vector{Int};
+                                    gamma_a_multiplier::T = 5.0,
+                                    gamma_θ_multiplier::T = 5.0,
+                                    beta_a_multiplier::T = 5.0,
+                                    beta_θ_multiplier::T = 5.0,
+                                    N_components = 5) where T
+    #
+
+    D = length(N_array)
+    limit_a = [τ; τ]
+    limit_b = [1-τ; 1-τ]
+
+    x_ranges = collect( LinRange(limit_a[d], limit_b[d], N_array[d]) for d = 1:D )
+
+    # gamma distribution.
+    R_g = Utilities.generaterandomposdefmat(D)
+    R_f = Utilities.generaterandomposdefmat(D)
+
+    a_g = abs.(randn(D)) .* gamma_a_multiplier
+    θ_g = abs.(randn(D)) .* gamma_θ_multiplier
+    gamma_dists = collect( Distributions.Beta(a_g[d], θ_g[d]) for d = 1:D )
+
+    g = xx->evalGaussiancopula(xx, R_g, gamma_dists)
+
+    #
+    a = collect( rand(D) .* beta_a_multiplier for m = 1:N_components )
+    θ = collect( rand(D) .* beta_θ_multiplier for m = 1:N_components )
+
+    beta_dists = collect( Distributions.Beta(a[m][d]) for d = 1:D, m = 1:N_components )
+
+    # assemble mixture.
+    mix_weights = rand(N_components)
+    mix_weights = mix_weights ./ sum(mix_weights)
+
+    mix_dists = collect( Distributions.MixtureModel(Distributions.Beta[
+                    beta_dists[d,:]...], mix_weights) for d = 1:D )
+
+    f = xx->evalGaussiancopula(xx, R_f, mix_dists)
+
+    #
+    h = xx->(0.15*f(xx)+0.85*g(xx))
+
+    return h, x_ranges
+end

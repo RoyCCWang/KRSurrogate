@@ -102,7 +102,6 @@ end
 
 function demohelmetadaptivebp(  a_array::Vector{T},
                                 σ_array::Vector{T};
-                                downsample_factor::Int = 3,
                                 τ = 2, # offset from border of samples.
                                 #N_realizations = 40,
                                 fig_num = 1,
@@ -110,7 +109,11 @@ function demohelmetadaptivebp(  a_array::Vector{T},
                                 initial_divisions = 1,
                                 skip_flag = false,
                                 amplification_factor = 1.0,
-                                scene_tag = "squiggle") where T <: Real
+                                zero_tol_RKHS::T = 1e-10,
+                                max_iters::Int = 2000,
+                                scene_tag = "squiggle",
+                                downsample_factor = 1.0,
+                                kernel_center_option = "grid") where T <: Real
 
     # set up target.
     D = 2
@@ -129,29 +132,41 @@ function demohelmetadaptivebp(  a_array::Vector{T},
 
 
 
-    # set up kernel centers.
-    Np_array::Vector{Int} = collect( div(N_array[d], downsample_factor) for d = 1:2 )
-    Xp_ranges = collect( LinRange(limit_a[d], limit_b[d], Np_array[d] ) for d = 1:D )
-    Xp = Utilities.ranges2collection(Xp_ranges, Val(D))
+    ### set up kernel centers.
+    𝑋 = Vector{Vector{T}}(undef, 0)
 
-    𝑋 = vec(Xp)
-    #𝑋 = collect( rand(Y_dist) for n = 1:N_realizations)
+    if kernel_center_option == "grid"
+        ## option 1: grid sample the sample space of the target distribution.
+        Np_array::Vector{Int} = collect( div(N_array[d], downsample_factor) for d = 1:2 )
+        Xp_ranges = collect( LinRange(limit_a[d], limit_b[d], Np_array[d] ) for d = 1:D )
+        Xp = Utilities.ranges2collection(Xp_ranges, Val(D))
+        𝑋 = vec(Xp)
 
+    elseif kernel_center_option == "draw"
+
+        ## option 2: samples of the target distributions, if we know how to sample from it.
+        𝑋 = collect( rand(Y_dist) for n = 1:N_realizations)
+
+    elseif kernel_center_option == "kDPP"
+        # ## option 3: kDPP.
+        canonical_a = a_array[end]
+        𝑋 = getkernelcentersviaadaptivekernel(canonical_a, x_ranges, limit_a, limit_b;
+                    amplification_factor = amplification_factor,
+                    N_preliminary_candidates = 2000,
+                    N_kDPP_per_draw = 100,
+                    N_refinements = 10)
+    end
+
+    # fine-tune candidate kernel centers.
     N_X = length(𝑋) .* ones(Int, D) #[25; length(𝑋)] # The number of kernels to fit. Will prune some afterwards.
     #N_X[1] = 25
     println("N_X = ", N_X)
     # @assert 1==2
 
-    # fit density via Bayesian optimization.
-
-    #amplification_factor = 2.0
-
-
-    zero_tol_RKHS = 1e-10
-    max_iters = 2000 #5000
+    # fit density via Riemannian optimization.
     fit_optim_config = ROptimConfigType(zero_tol_RKHS, max_iters)
 
-    # I am here. need better density fitter. use Optim.
+    #
     c_array, 𝓧_array, θ_array,
             dφ_array, d2φ_array,
             dϕ_array, d2ϕ_array,
@@ -175,7 +190,6 @@ end
 
 function demohelmetnonadaptive(  a_array::Vector{T},
                                 σ_array::Vector{T};
-                                downsample_factor::Int = 3,
                                 τ = 2, # offset from border of samples.
                                 #N_realizations = 40,
                                 fig_num = 1,
@@ -184,7 +198,9 @@ function demohelmetnonadaptive(  a_array::Vector{T},
                                 skip_flag = false,
                                 zero_tol_RKHS::T = 1e-10,
                                 max_iters::Int = 2000,
-                                scene_tag = "squiggle") where T <: Real
+                                scene_tag = "squiggle",
+                                downsample_factor = 1.0,
+                                kernel_center_option = "grid") where T <: Real
 
     # set up target.
     D = 2
@@ -203,25 +219,37 @@ function demohelmetnonadaptive(  a_array::Vector{T},
 
 
 
-    # set up kernel centers.
-    Np_array::Vector{Int} = collect( div(N_array[d], downsample_factor) for d = 1:2 )
-    Xp_ranges = collect( LinRange(limit_a[d], limit_b[d], Np_array[d] ) for d = 1:D )
-    Xp = Utilities.ranges2collection(Xp_ranges, Val(D))
+    ### set up kernel centers.
+    𝑋 = Vector{Vector{T}}(undef, 0)
 
-    𝑋 = vec(Xp)
-    #𝑋 = collect( rand(Y_dist) for n = 1:N_realizations)
+    if kernel_center_option == "grid"
+        ## option 1: grid sample the sample space of the target distribution.
+        Np_array::Vector{Int} = collect( div(N_array[d], downsample_factor) for d = 1:2 )
+        Xp_ranges = collect( LinRange(limit_a[d], limit_b[d], Np_array[d] ) for d = 1:D )
+        Xp = Utilities.ranges2collection(Xp_ranges, Val(D))
+        𝑋 = vec(Xp)
+
+    elseif kernel_center_option == "draw"
+
+        ## option 2: samples of the target distributions, if we know how to sample from it.
+        𝑋 = collect( rand(Y_dist) for n = 1:N_realizations)
+
+    elseif kernel_center_option == "kDPP"
+        # ## option 3: kDPP.
+        canonical_a = a_array[end]
+        𝑋 = getkernelcentersviaadaptivekernel(canonical_a, x_ranges, limit_a, limit_b;
+                    amplification_factor = amplification_factor,
+                    N_preliminary_candidates = 2000,
+                    N_kDPP_per_draw = 100,
+                    N_refinements = 10)
+    end
 
     N_X = length(𝑋) .* ones(Int, D) #[25; length(𝑋)] # The number of kernels to fit. Will prune some afterwards.
     #N_X[1] = 25
     println("N_X = ", N_X)
     # @assert 1==2
 
-    # fit density via Bayesian optimization.
-
-    #amplification_factor = 2.0
-
-
-
+    # fit density via Riemannian optimization.
     fit_optim_config = ROptimConfigType(zero_tol_RKHS, max_iters)
 
     # fit.
