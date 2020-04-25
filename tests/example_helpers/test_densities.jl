@@ -248,19 +248,64 @@ function preparegmmdist(μ_array::Vector{Vector{T}},
     return pdf, dist_gen
 end
 
-# mixture of tuncated beta-marginal Gaussian copula and gamma-marginal Gaussian copula.
+# ### mixture of tuncated beta-marginal Gaussian copula and gamma-marginal Gaussian copula.
+# function generaterandombetacopula( τ::T,
+#                                     N_array::Vector{Int};
+#                                     gamma_a_multiplier::T = 5.0,
+#                                     gamma_θ_multiplier::T = 5.0,
+#                                     beta_a_multiplier::T = 5.0,
+#                                     beta_θ_multiplier::T = 5.0,
+#                                     N_components = 5) where T
+#     #
+#
+#     D = length(N_array)
+#     limit_a = [τ; τ]
+#     limit_b = [1-τ; 1-τ]
+#
+#     x_ranges = collect( LinRange(limit_a[d], limit_b[d], N_array[d]) for d = 1:D )
+#
+#     # gamma distribution.
+#     R_g = Utilities.generaterandomposdefmat(D)
+#     R_f = Utilities.generaterandomposdefmat(D)
+#
+#     a_g = abs.(randn(D)) .* gamma_a_multiplier
+#     θ_g = abs.(randn(D)) .* gamma_θ_multiplier
+#     gamma_dists = collect( Distributions.Beta(a_g[d], θ_g[d]) for d = 1:D )
+#
+#     g = xx->evalGaussiancopula(xx, R_g, gamma_dists)
+#
+#     #
+#     a = collect( rand(D) .* beta_a_multiplier for m = 1:N_components )
+#     θ = collect( rand(D) .* beta_θ_multiplier for m = 1:N_components )
+#
+#     beta_dists = collect( Distributions.Beta(a[m][d]) for d = 1:D, m = 1:N_components )
+#
+#     # assemble mixture.
+#     mix_weights = rand(N_components)
+#     mix_weights = mix_weights ./ sum(mix_weights)
+#
+#     mix_dists = collect( Distributions.MixtureModel(Distributions.Beta[
+#                     beta_dists[d,:]...], mix_weights) for d = 1:D )
+#
+#     f = xx->evalGaussiancopula(xx, R_f, mix_dists)
+#
+#     #
+#     h = xx->(0.05*f(xx)+0.95*g(xx))
+#
+#     return h, x_ranges, f, mix_dists, R_f, g, gamma_dists, R_g
+# end
+
 function generaterandombetacopula( τ::T,
                                     N_array::Vector{Int};
-                                    gamma_a_multiplier::T = 5.0,
-                                    gamma_θ_multiplier::T = 5.0,
-                                    beta_a_multiplier::T = 5.0,
-                                    beta_θ_multiplier::T = 5.0,
-                                    N_components = 5) where T
+                                    gamma_a_multiplier::T = 2.0,
+                                    gamma_θ_multiplier::T = 2.0,
+                                    beta_a_multiplier::T = 2.0,
+                                    beta_θ_multiplier::T = 2.0) where T
     #
 
     D = length(N_array)
-    limit_a = [τ; τ]
-    limit_b = [1-τ; 1-τ]
+    limit_a = ones(T, D) .* τ
+    limit_b = ones(T, D) .* (1-τ)
 
     x_ranges = collect( LinRange(limit_a[d], limit_b[d], N_array[d]) for d = 1:D )
 
@@ -275,22 +320,67 @@ function generaterandombetacopula( τ::T,
     g = xx->evalGaussiancopula(xx, R_g, gamma_dists)
 
     #
-    a = collect( rand(D) .* beta_a_multiplier for m = 1:N_components )
-    θ = collect( rand(D) .* beta_θ_multiplier for m = 1:N_components )
+    a_b = rand(D) .* beta_a_multiplier
+    θ_b = rand(D) .* beta_θ_multiplier
 
-    beta_dists = collect( Distributions.Beta(a[m][d]) for d = 1:D, m = 1:N_components )
+    beta_dists = collect( Distributions.Beta(a_b[d], θ_b[d]) for d = 1:D )
 
-    # assemble mixture.
-    mix_weights = rand(N_components)
-    mix_weights = mix_weights ./ sum(mix_weights)
 
-    mix_dists = collect( Distributions.MixtureModel(Distributions.Beta[
-                    beta_dists[d,:]...], mix_weights) for d = 1:D )
+    f = xx->evalGaussiancopula(xx, R_f, beta_dists)
 
-    f = xx->evalGaussiancopula(xx, R_f, mix_dists)
+    # generate mixture weights.
+    w_g = rand()*0.2
+    w_b = rand()*0.8
+    h = xx->(w_b*f(xx)+w_g*g(xx))
 
+    return h, x_ranges, f, beta_dists, R_f, w_b,
+                        g, gamma_dists, R_g, w_g
+
+end
+
+
+function inverseprobit(x::T)::T where T <: Real
+    return (one(T)-SpecialFunctions.erf(-x/sqrt(2)))/2
+end
+
+function drawfromGaussiancopula(inv_cdfs::Vector,
+                                R::Matrix{T}) where T <: Real
     #
-    h = xx->(0.15*f(xx)+0.85*g(xx))
+    D = size(R)[1]
 
-    return h, x_ranges
+    L = cholesky(R).L
+    z = collect( randn() for d = 1:D )
+    x = L*z
+    for i = 1:D
+        x[i] = inv_cdfs[i](inverseprobit(x[i]))
+    end
+
+    return x
+end
+
+# draws N samples of the specified copula.
+function drawfromdemocopula(N::Int,
+                            β_dists,
+                            R_β::Matrix{T},
+                            w_β::T,
+                            γ_dists,
+                            R_γ::Matrix{T},
+                            w_γ::T) where T
+    # set up.
+    quantiles_γ = collect( qq->Distributions.quantile(γ_dists[d], qq) for d = 1:D )
+    quantiles_β = collect( qq->Distributions.quantile(β_dists[d], qq) for d = 1:D )
+
+
+    Y = Vector{Vector{T}}(undef, N)
+
+    for n = 1:N
+
+        if rand() < w_γ
+            Y[n] = drawfromGaussiancopula(quantiles_γ, R_γ)
+        else
+            Y[n] = drawfromGaussiancopula(quantiles_β, R_β)
+        end
+    end
+
+    return Y
 end

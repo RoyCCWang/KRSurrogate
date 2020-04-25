@@ -13,6 +13,7 @@ using FFTW
 
 import Utilities
 import Distributions
+import VisualizationTools
 
 include("basic_model.jl")
 include("parsers.jl")
@@ -57,8 +58,8 @@ N = length(Y)
 D = 2
 const_params = [ discount_factor, N_pop, R_0, S_0, I_0 ]
 
-# σ = 20.0 # fancy shape.
-σ = 2.0 # very condense region of space.
+σ = 20.0 # fancy shape.
+# σ = 2.0 # very condense region of space.
 Σ_y = diagm( ones(N) .* σ^2 )
 
 

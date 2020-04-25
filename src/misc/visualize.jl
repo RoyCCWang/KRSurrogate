@@ -139,3 +139,79 @@ function imshowgrayscale(fig_num::Int, A, title_string::String)
 
     return fig_num
 end
+
+
+
+
+
+function separatecomponents(Y::Vector{Vector{T}})::Vector{Vector{T}} where T
+
+    D = length(Y[1])
+    N = length(Y)
+
+    out = Vector{Vector{T}}(undef, D)
+
+    for d = 1:D
+        out[d] = Vector{T}(undef, N)
+
+        for n = 1:N
+
+            out[d][n] = Y[n][d]
+        end
+    end
+
+    return out
+end
+
+
+
+function plotallpairwisecontours(X_array::Vector{Vector{T}},
+                                dummy_handle::HT,
+                                N_bins::Int,
+                                N_bins_h1::Int,
+                                output_folder_name::String) where {T,HT}
+
+    #
+    #N = length(X_array[1])
+    D = length(X_array)
+
+    for d = 1:D
+        handles_d = Vector{HT}(undef, d)
+
+        # 2D contour density plot of pair-wise marginals.
+        for k = 1:d-1
+            # prepare samples for each dimension.
+            x = X_array[d]
+            y = X_array[k]
+
+            # empirical density of pair-wise marginal dim d vs. dim k,
+            #   (horizontal vs. vertical on plot).
+            h = StatsBase.fit(StatsBase.Histogram, (x, y),
+                        closed = :left, nbins = (N_bins, N_bins));
+
+            handles_d[k] = Plots.contour(StatsBase.midpoints(h.edges[1]),
+                                 StatsBase.midpoints(h.edges[2]),
+                                 h.weights';
+                                 colorbar = :none,
+                                 #aspect_ratio = :equal,
+                                 reuse = false)
+            #
+
+
+            save_fig_name = Printf.@sprintf("%s/d-k_%d-%d.png",
+                                output_folder_name, d, k)
+            Plots.savefig(handles_d[k], save_fig_name)
+        end
+
+        # plot.
+        width_tuple = Tuple( 1/d for i = 1:d )
+        height_tuple = Tuple( 1.0 for i = 1:d )
+        fig_d = Plots.plot(handles_d..., layout = Plots.grid(1,d, heights=height_tuple, widths=width_tuple))
+
+
+        # display.
+        display(fig_d)
+    end
+
+    return nothing
+end
