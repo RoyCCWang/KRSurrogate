@@ -10,6 +10,3 @@ Steps to install this package in Julia:
 3. Run the command ```import SurrogateKR``` to compile the package into cache storage.
 
 If this repository is modified in the future, one needs to enter package mode in Julia REPL, and run the command ```update SurrogateKR```.
-
-
-# References
